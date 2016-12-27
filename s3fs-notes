@@ -1,0 +1,1 @@
+(AWSSECRETACCESSKEY=$(grep aws_secret_access_key .aws/credentials | awk -F= '{print $2}') AWSACCESSKEYID=$(grep aws_access_key_id .aws/credentials | awk -F= '{print $2}') ~/s3fs/bin/s3fs flickr-sanctuary /tmp/x)
