@@ -10,6 +10,10 @@ Similar idea: https://github.com/tgerla/flickr-s3-backup
 
 TODO: write a counterpart that uploads from S3 to Google Photos.  See
 https://developers.google.com/picasa-web/docs/2.0/developers_guide_protocol#PostPhotos
+
+There's also https://www.amazon.com/photos; I imagine it'd be easy to
+get photos from S3 to there.
+https://developer.amazon.com/public/apis/experience/cloud-drive/content/restful-api-getting-started
 """
 
 # Core
