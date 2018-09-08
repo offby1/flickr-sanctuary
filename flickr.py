@@ -19,6 +19,7 @@ https://rclone.org/ might also let me get from S3 to Google Photos (well, at lea
 import json
 import logging
 import os
+import pathlib
 import tempfile
 
 # 3rd-party
@@ -135,6 +136,28 @@ class S3Storage:
                                                Callback=pbar.update)
 
 
+def _get_metadata(flickr):
+    CACHE_FILE_NAME = pathlib.Path(__file__).parent / '.metadata_cache.json'
+    try:
+        with open(CACHE_FILE_NAME) as inf:
+            _log.info(f"Reading metadata cache file {CACHE_FILE_NAME}")
+            return json.load(inf)
+    except FileNotFoundError:
+        _log.info(f"No metadata cache file {CACHE_FILE_NAME}; grabbing metadata for all photos")
+
+        metadata = []
+        for datum in tqdm.tqdm(flickr.all_photo_metadata(),
+                               unit='',
+                               total=2213 # "empirically determined" :-)
+    ):
+            metadata.append(datum)
+        with open(CACHE_FILE_NAME, 'w') as outf:
+            json.dump(metadata, outf)
+            _log.info(f"Wrote metadata cache file {CACHE_FILE_NAME}")
+
+        return _get_metadata(flickr)
+
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO,
                         format='%(asctime)s %(levelname)-5.5s [%(name)s] %(message)s')
@@ -152,17 +175,10 @@ if __name__ == "__main__":
                                                format='parsed-json',
                                                cache=True))
 
-    storage = S3Storage()
-
-    _log.info("Grabbing metadata for all photos")
-    all_photo_metadata = []
-    for datum in tqdm.tqdm(flickr.all_photo_metadata(),
-                           unit='',
-                           total=2213 # "empirically determined" :-)
-    ):
-        all_photo_metadata.append(datum)
+    all_photo_metadata = _get_metadata(flickr)
 
     try:
+        storage = S3Storage()
         _log.info("Ensuring all photos are uploaded")
         for (_, photo) in tqdm.tqdm(all_photo_metadata,
                                     unit='photo'):
