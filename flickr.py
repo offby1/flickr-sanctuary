@@ -28,8 +28,8 @@ import boto3                    # pip install boto3
 import botocore.exceptions
 import configobj                # pip install configobj
 import flickrapi                # pip install flickrapi
-import progressbar              # pip install progressbar2
 import requests                 # pip install requests
+import tqdm                     # pip install tqdm
 
 _log = logging.getLogger(__name__)
 
@@ -121,10 +121,7 @@ class S3Storage:
     def ensure_stored(self, id_, datum_name, data_thunk):
         objname = self._make_object_name(id_, datum_name)
 
-        if self._object_exists(objname):
-            _log.info(f"{objname} already exists; not bothering to upload")
-        else:
-            _log.info(f"{objname} does not exist; uploading")
+        if not self._object_exists(objname):
             o = self.bucket.Object(objname)
             o.put(Body=data_thunk())
 
@@ -137,7 +134,7 @@ if __name__ == "__main__":
     logging.Formatter.default_time_format = '%FT%T'
     logging.Formatter.default_msec_format = '%s.%03dZ'
 
-    logging.getLogger('flickrapi.core').setLevel(logging.DEBUG)
+    logging.getLogger('flickrapi.core').setLevel(logging.WARN)
 
     api_key, shared_secret = get_auth_stuff()
 
@@ -148,18 +145,22 @@ if __name__ == "__main__":
 
     storage = S3Storage()
 
-    bar = progressbar.ProgressBar()
-    bar.start()
+    _log.info("Grabbing metadata for all photos")
+    all_photo_metadata = []
+    for datum in tqdm.tqdm(flickr.all_photo_metadata(),
+                           unit='',
+                           total=2213 # "empirically determined" :-)
+    ):
+        all_photo_metadata.append(datum)
 
     try:
-        for photo_index, (total, photo) in enumerate(flickr.all_photo_metadata()):
-            bar.max_value = total * len(flickr.method_map)
+        _log.info("Ensuring all photos are uploaded")
+        for (_, photo) in tqdm.tqdm(all_photo_metadata,
+                                    unit='photo'):
 
             id_ = photo['id']
-            for method_index, (datum_name, method) in enumerate(flickr.method_map.items()):
+            for (datum_name, method) in flickr.method_map.items():
                 storage.ensure_stored(id_, datum_name, lambda : method(id_))
-
-                bar.update(1 + method_index + photo_index * len(flickr.method_map))
 
     except KeyboardInterrupt:
         pass
