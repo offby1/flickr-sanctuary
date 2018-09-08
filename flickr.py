@@ -20,6 +20,7 @@ https://rclone.org/ might also let me get from S3 to Google Photos (well, at lea
 
 # Core
 import json
+import logging
 import os
 
 # 3rd-party
@@ -29,6 +30,8 @@ import configobj                # pip install configobj
 import flickrapi                # pip install flickrapi
 import progressbar              # pip install progressbar2
 import requests                 # pip install requests
+
+_log = logging.getLogger(__name__)
 
 # API docs: https://www.flickr.com/services/api/
 
@@ -118,12 +121,24 @@ class S3Storage:
     def ensure_stored(self, id_, datum_name, data_thunk):
         objname = self._make_object_name(id_, datum_name)
 
-        if not self._object_exists(objname):
+        if self._object_exists(objname):
+            _log.info(f"{objname} already exists; not bothering to upload")
+        else:
+            _log.info(f"{objname} does not exist; uploading")
             o = self.bucket.Object(objname)
             o.put(Body=data_thunk())
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO,
+                        format='%(asctime)s %(levelname)-5.5s [%(name)s] %(message)s')
+
+    # fix logging to be more like RFC3339
+    logging.Formatter.default_time_format = '%FT%T'
+    logging.Formatter.default_msec_format = '%s.%03dZ'
+
+    logging.getLogger('flickrapi.core').setLevel(logging.DEBUG)
+
     api_key, shared_secret = get_auth_stuff()
 
     flickr = FlickrAdapter(flickrapi.FlickrAPI(api_key,
