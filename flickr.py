@@ -19,15 +19,11 @@ https://rclone.org/ might also let me get from S3 to Google Photos (well, at lea
 """
 
 # Core
-import datetime
 import json
 import os
-import pprint
-import sys
 
 # 3rd-party
 import boto3                    # pip install boto3
-import boto3.s3
 import botocore.exceptions
 import configobj                # pip install configobj
 import flickrapi                # pip install flickrapi
@@ -35,6 +31,7 @@ import progressbar              # pip install progressbar2
 import requests                 # pip install requests
 
 # API docs: https://www.flickr.com/services/api/
+
 
 def get_auth_stuff(filename=None):
     if filename is None:
@@ -69,7 +66,6 @@ class FlickrAdapter:
             if d['label'] == 'Original':
                 return requests.get(d['source']).content
 
-
     def all_photo_metadata(self):
         requested_page = 1
         per_page = 100
@@ -90,6 +86,7 @@ class FlickrAdapter:
                 return
 
             requested_page += 1
+
 
 class S3Storage:
     def __init__(self):
@@ -118,13 +115,13 @@ class S3Storage:
 
         return True
 
-
     def ensure_stored(self, id_, datum_name, data_thunk):
         objname = self._make_object_name(id_, datum_name)
 
         if not self._object_exists(objname):
             o = self.bucket.Object(objname)
             o.put(Body=data_thunk())
+
 
 if __name__ == "__main__":
     api_key, shared_secret = get_auth_stuff()
@@ -133,7 +130,6 @@ if __name__ == "__main__":
                                                shared_secret,
                                                format='parsed-json',
                                                cache=True))
-
 
     storage = S3Storage()
 
