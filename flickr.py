@@ -1,8 +1,5 @@
 #!/usr/bin/env python
 
-from __future__ import print_function
-from __future__ import absolute_import
-
 """ Copy all my flickr photos to s3, since I don't expect flickr will
 be around for long.
 
@@ -22,6 +19,7 @@ https://rclone.org/ might also let me get from S3 to Google Photos (well, at lea
 import json
 import logging
 import os
+import tempfile
 
 # 3rd-party
 import boto3                    # pip install boto3
@@ -122,8 +120,19 @@ class S3Storage:
         objname = self._make_object_name(id_, datum_name)
 
         if not self._object_exists(objname):
-            o = self.bucket.Object(objname)
-            o.put(Body=data_thunk())
+            with tempfile.TemporaryFile() as tf:
+                data = data_thunk()
+                if hasattr(data, 'encode'):
+                    data = data.encode()
+                tf.write(data)
+                tf.flush()
+                with tqdm.tqdm(unit='byte',
+                               desc=objname,
+                               total=tf.tell()) as pbar:
+                    tf.seek(0)
+                    self.bucket.upload_fileobj(tf,
+                                               objname,
+                                               Callback=pbar.update)
 
 
 if __name__ == "__main__":
@@ -160,7 +169,9 @@ if __name__ == "__main__":
 
             id_ = photo['id']
             for (datum_name, method) in flickr.method_map.items():
-                storage.ensure_stored(id_, datum_name, lambda : method(id_))
+                storage.ensure_stored(id_,
+                                      datum_name=datum_name,
+                                      data_thunk=lambda : method(id_))
 
     except KeyboardInterrupt:
         pass
