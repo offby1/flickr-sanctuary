@@ -152,7 +152,9 @@ def _get_metadata(flickr):
     ):
             metadata.append(datum)
         with open(CACHE_FILE_NAME, 'w') as outf:
-            json.dump(metadata, outf)
+            json.dump(metadata, outf,
+                      separators=(',', ':'),
+                      indent=2)
             _log.info(f"Wrote metadata cache file {CACHE_FILE_NAME}")
 
         return _get_metadata(flickr)
