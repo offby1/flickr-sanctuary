@@ -23,12 +23,12 @@ import pathlib
 import tempfile
 
 # 3rd-party
-import boto3                    # pip install boto3
+import boto3  # pip install boto3
 import botocore.exceptions
-import configobj                # pip install configobj
-import flickrapi                # pip install flickrapi
-import requests                 # pip install requests
-import tqdm                     # pip install tqdm
+import configobj  # pip install configobj
+import flickrapi  # pip install flickrapi
+import requests  # pip install requests
+import tqdm  # pip install tqdm
 
 _log = logging.getLogger(__name__)
 
@@ -41,8 +41,7 @@ def get_auth_stuff(filename=None):
 
     c = configobj.ConfigObj(filename)
 
-    return(c['flickr']['api_key'],
-           c['flickr']['shared_secret'])
+    return (c['flickr']['api_key'], c['flickr']['shared_secret'])
 
 
 class FlickrAdapter:
@@ -50,8 +49,8 @@ class FlickrAdapter:
         self.flickr = flickr
         self.username = username
         self.method_map = {
-            'Exif':  self.getExif,
-            'Info':  self.getInfo,
+            'Exif': self.getExif,
+            'Info': self.getInfo,
             'Original': self.get_original,
         }
 
@@ -72,12 +71,14 @@ class FlickrAdapter:
         requested_page = 1
         per_page = 100
 
-        my_nsid = self.flickr.people_findByUsername(username=self.username)['user']['nsid']
+        my_nsid = self.flickr.people_findByUsername(username=self.username)['user'][
+            'nsid'
+        ]
 
         while True:
-            rsp = self.flickr.photos_search(user_id=my_nsid,
-                                            page=requested_page,
-                                            per_page=str(per_page))
+            rsp = self.flickr.photos_search(
+                user_id=my_nsid, page=requested_page, per_page=str(per_page)
+            )
 
             photos = rsp['photos']
 
@@ -108,7 +109,7 @@ class S3Storage:
             self.s3 = self.session.resource('s3')
 
         if self.bucket is None:
-            self.bucket = self.s3.Bucket (self.bucket_name)
+            self.bucket = self.s3.Bucket(self.bucket_name)
 
         try:
             self.bucket.Object(object_name).metadata
@@ -127,13 +128,9 @@ class S3Storage:
                     data = data.encode()
                 tf.write(data)
                 tf.flush()
-                with tqdm.tqdm(unit='byte',
-                               desc=objname,
-                               total=tf.tell()) as pbar:
+                with tqdm.tqdm(unit='byte', desc=objname, total=tf.tell()) as pbar:
                     tf.seek(0)
-                    self.bucket.upload_fileobj(tf,
-                                               objname,
-                                               Callback=pbar.update)
+                    self.bucket.upload_fileobj(tf, objname, Callback=pbar.update)
 
 
 def _get_metadata(flickr):
@@ -143,26 +140,29 @@ def _get_metadata(flickr):
             _log.info(f"Reading metadata cache file {CACHE_FILE_NAME}")
             return json.load(inf)
     except FileNotFoundError:
-        _log.info(f"No metadata cache file {CACHE_FILE_NAME}; grabbing metadata for all photos")
+        _log.info(
+            f"No metadata cache file {CACHE_FILE_NAME}; grabbing metadata for all photos"
+        )
 
         metadata = []
-        for datum in tqdm.tqdm(flickr.all_photo_metadata(),
-                               unit='',
-                               total=2213 # "empirically determined" :-)
-    ):
+        for datum in tqdm.tqdm(
+            flickr.all_photo_metadata(),
+            unit='',
+            total=2213,  # "empirically determined" :-)
+        ):
             metadata.append(datum)
         with open(CACHE_FILE_NAME, 'w') as outf:
-            json.dump(metadata, outf,
-                      separators=(',', ':'),
-                      indent=2)
+            json.dump(metadata, outf, separators=(',', ':'), indent=2)
             _log.info(f"Wrote metadata cache file {CACHE_FILE_NAME}")
 
         return _get_metadata(flickr)
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO,
-                        format='%(asctime)s %(levelname)-5.5s [%(name)s] %(message)s')
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s %(levelname)-5.5s [%(name)s] %(message)s',
+    )
 
     # fix logging to be more like RFC3339
     logging.Formatter.default_time_format = '%FT%T'
@@ -172,24 +172,22 @@ if __name__ == "__main__":
 
     api_key, shared_secret = get_auth_stuff()
 
-    flickr = FlickrAdapter(flickrapi.FlickrAPI(api_key,
-                                               shared_secret,
-                                               format='parsed-json',
-                                               cache=True))
+    flickr = FlickrAdapter(
+        flickrapi.FlickrAPI(api_key, shared_secret, format='parsed-json', cache=True)
+    )
 
     all_photo_metadata = _get_metadata(flickr)
 
     try:
         storage = S3Storage()
         _log.info("Ensuring all photos are uploaded")
-        for (_, photo) in tqdm.tqdm(all_photo_metadata,
-                                    unit='photo'):
+        for (_, photo) in tqdm.tqdm(all_photo_metadata, unit='photo'):
 
             id_ = photo['id']
             for (datum_name, method) in flickr.method_map.items():
-                storage.ensure_stored(id_,
-                                      datum_name=datum_name,
-                                      data_thunk=lambda : method(id_))
+                storage.ensure_stored(
+                    id_, datum_name=datum_name, data_thunk=lambda: method(id_)
+                )
 
     except KeyboardInterrupt:
         pass
