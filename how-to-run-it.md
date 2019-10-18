@@ -2,7 +2,7 @@ So here's this thing I wrote called flickr.py.
 
 Run it like this
 
-    pipenv run python flickr.py
+    python3 -m pipenv run python flickr.py
 
 It's more or less safe to do so, since it won't upload anything if it sees that there's already something in s3 with the same name.
 
