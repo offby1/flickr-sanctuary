@@ -1,0 +1,21 @@
+[project]
+name = ""
+version = "0.0.1"
+dependencies = [
+    "boto3",
+    "configobj",
+    "flickrapi",
+    "requests",
+    "tqdm",
+]
+
+[dependency-groups]
+dev = []
+
+[tool.uv]
+package = false
+default-groups = "all"
+
+[[tool.uv.index]]
+name = "pypi"
+url = "https://pypi.org/simple"

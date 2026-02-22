@@ -1,4 +1,8 @@
-#!/usr/bin/env python
+#!/usr/bin/env -S uv run python
+# /// script
+# requires-python = ">=3.14"
+# dependencies = []
+# ///
 
 """ Copy all my flickr photos to s3, since I don't expect flickr will
 be around for long.
