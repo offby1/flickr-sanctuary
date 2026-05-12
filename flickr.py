@@ -44,6 +44,9 @@ def get_auth_stuff(filename=None):
         filename = os.path.expanduser('~/.flickr-auth')
 
     c = configobj.ConfigObj(filename)
+    if not c.sections:
+        raise Exception(f"{filename!r} either doesn't exist, or is empty")
+
 
     return (c['flickr']['api_key'], c['flickr']['shared_secret'])
 
